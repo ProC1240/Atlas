@@ -11,6 +11,7 @@ A strength-training companion built around interactive anatomy, a personal worko
 - **Build your bond** — five avatars, daily gifts, independent levels, and collectible rewards.
 - **Feel the progress** — animated offerings, live level-ups, and reduced-motion support.
 - **Keep your data** — guest browsing, device storage, and validated JSON import/export.
+- **Resume safely** — account-scoped workout/profile drafts and server-managed cookie sessions.
 
 ## Stack
 
@@ -44,9 +45,10 @@ For browser checks, start the dev server, then run:
 ```sh
 npx playwright install chromium
 npm run test:browser
+npm run test:auth
 ```
 
-Browser tests use an isolated profile and save screenshots locally.
+Browser tests use an isolated profile. Auth tests start a separate production server and local mock provider; run `npm run build` first. They do not send real emails or validate a hosted database.
 
 ## Project structure
 
@@ -62,7 +64,7 @@ scripts/          Browser verification
 
 ## Status
 
-Working web MVP. Device storage is available; cloud auth is optional and not live-tested. Payments, community, and a mobile client are planned, not implemented.
+Working web MVP. Device storage and local drafts are available. Email OTP, HttpOnly sessions, refresh, sign-out, and protected journal APIs are implemented; live Supabase configuration and database verification are still required. Payments, community, and a mobile client are planned, not implemented.
 
 The 3D models are stylized prototypes. Exercise notes are adapted from *Functional Anatomy for Strength Training*, with page references in the catalog; the source PDF is not distributed. Exercise animations and body estimates are educational, not medical guidance.
 

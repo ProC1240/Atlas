@@ -58,6 +58,16 @@ try {
   await page.getByRole('button', { name: 'Log workout', exact: true }).click();
   for (let i = 1; i <= 3; i++)
     await page.getByRole('spinbutton', { name: `Set ${i} weight`, exact: true }).fill('30');
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Chest', exact: true }).click();
+  await page.getByRole('button', { name: /Incline dumbbell press/ }).click();
+  await page.getByRole('button', { name: 'Log workout', exact: true }).click();
+  assert.equal(
+    await page.getByRole('spinbutton', { name: 'Set 1 weight', exact: true }).inputValue(),
+    '30',
+  );
+  await page.getByText('Draft saved on this device', { exact: true }).waitFor();
+  pass('Unsaved workout draft survives a reload without becoming a journal entry');
   await page.getByRole('button', { name: 'Save workout', exact: true }).click();
   await page.getByRole('heading', { name: 'Make it your own.' }).waitFor();
   assert.match(
@@ -67,6 +77,12 @@ try {
   await page.getByRole('button', { name: 'Continue on this device' }).click();
   await page.waitForFunction(
     () => JSON.parse(localStorage.getItem('atlas.training.v1') || '{}').workouts?.length === 1,
+  );
+  assert.equal(
+    await page.evaluate(
+      () => Object.keys(localStorage).filter((k) => k.startsWith('atlas.draft.v1:')).length,
+    ),
+    0,
   );
   pass('Source references, animation controls, guest save gate and local persistence');
 
@@ -134,6 +150,10 @@ try {
   await page.getByLabel('Weight', { exact: false }).fill('70');
   await page.getByLabel('Age', { exact: false }).fill('25');
   await page.getByLabel('Formula sex', { exact: false }).selectOption('male');
+  await page.reload({ waitUntil: 'networkidle' });
+  assert.equal(await page.getByLabel('Display name', { exact: true }).inputValue(), 'Atlas Tester');
+  assert.equal(await page.getByLabel('Height', { exact: false }).inputValue(), '175');
+  pass('Profile draft survives reload independently of saved profile');
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export', exact: true }).click();

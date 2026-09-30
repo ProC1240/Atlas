@@ -26,7 +26,7 @@ const navigation = [
   { id: 'avatar', label: 'My Atlas', href: '/avatar', icon: Sparkles },
 ];
 export function AppShell({ section }: { section: Section }) {
-  const { ready, mode, data, saving, syncError, setAuthOpen, retry } = useTraining();
+  const { ready, mode, scope, data, saving, syncError, setAuthOpen, retry } = useTraining();
   return (
     <div className="app">
       <a className="skip-link" href="#main">
@@ -91,7 +91,7 @@ export function AppShell({ section }: { section: Section }) {
           <button onClick={retry}>Retry save</button>
         </div>
       )}
-      <main key={section} id="main" className="main-content page-enter" tabIndex={-1}>
+      <main key={`${section}:${scope}`} id="main" className="main-content page-enter" tabIndex={-1}>
         {!ready ? (
           <div className="page-loading">
             <span className="loading-orbit" />

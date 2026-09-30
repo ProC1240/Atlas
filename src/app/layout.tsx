@@ -9,6 +9,7 @@ import '@fontsource/cinzel/500.css';
 import './globals.css';
 import './bond.css';
 import './motion.css';
+import './drafts.css';
 import { TrainingProvider } from '@/components/store';
 export const metadata: Metadata = {
   title: 'ATLAS — Strength, with purpose',

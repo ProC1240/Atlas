@@ -1,5 +1,7 @@
 'use client';
 import { useState } from 'react';
+import { useDraft } from './use-draft';
+import { workoutDraftSchema, type WorkoutDraft } from '@/lib/drafts';
 import { Check, Plus, Trash2, BookOpen } from 'lucide-react';
 import { type Exercise, muscleById, source } from '@/domain/catalog';
 import { dateKey, saveWorkout, workoutSchema, type Workout } from '@/domain/training';
@@ -18,16 +20,24 @@ export function ExerciseDialog({
 }) {
   const { mutate, requireSave, toast } = useTraining();
   const [tab, setTab] = useState<'learn' | 'log'>(existing ? 'log' : 'learn');
-  const [sets, setSets] = useState(
-      existing?.sets ?? [
+  const draft = useDraft<WorkoutDraft>(
+    `workout:${exercise.id}:${existing?.id ?? 'new'}`,
+    {
+      sets: existing?.sets ?? [
         { weight: 0, reps: 10 },
         { weight: 0, reps: 10 },
         { weight: 0, reps: 10 },
       ],
-    ),
-    [date, setDate] = useState(existing?.date ?? dateKey()),
-    [note, setNote] = useState(existing?.note ?? ''),
-    [error, setError] = useState('');
+      date: existing?.date ?? dateKey(),
+      note: existing?.note ?? '',
+    },
+    workoutDraftSchema,
+  );
+  const { sets, date, note } = draft.value;
+  const setSets = (sets: WorkoutDraft['sets']) => draft.setValue((d) => ({ ...d, sets }));
+  const setDate = (date: string) => draft.setValue((d) => ({ ...d, date }));
+  const setNote = (note: string) => draft.setValue((d) => ({ ...d, note }));
+  const [error, setError] = useState('');
   const unit =
     exercise.metric === 'meters' ? 'Meters' : exercise.metric === 'seconds' ? 'Seconds' : 'Reps';
   function submit() {
@@ -43,7 +53,7 @@ export function ExerciseDialog({
       });
       if (date > dateKey()) throw new Error('Future date');
       requireSave(() => {
-        mutate((d) => saveWorkout(d, workout));
+        if (!mutate((d) => saveWorkout(d, workout), draft.clear)) return;
         toast(existing ? 'Workout updated.' : 'Workout saved. One step stronger.');
         onClose();
       });
@@ -148,10 +158,14 @@ export function ExerciseDialog({
                 max="1500"
                 step=".25"
                 required
-                value={set.weight}
+                value={set.weight ?? ''}
                 onChange={(e) =>
                   setSets(
-                    sets.map((s, j) => (j === i ? { ...s, weight: e.target.valueAsNumber } : s)),
+                    sets.map((s, j) =>
+                      j === i
+                        ? { ...s, weight: e.target.value === '' ? null : e.target.valueAsNumber }
+                        : s,
+                    ),
                   )
                 }
               />
@@ -162,10 +176,14 @@ export function ExerciseDialog({
                 max="10000"
                 step="1"
                 required
-                value={set.reps}
+                value={set.reps ?? ''}
                 onChange={(e) =>
                   setSets(
-                    sets.map((s, j) => (j === i ? { ...s, reps: e.target.valueAsNumber } : s)),
+                    sets.map((s, j) =>
+                      j === i
+                        ? { ...s, reps: e.target.value === '' ? null : e.target.valueAsNumber }
+                        : s,
+                    ),
                   )
                 }
               />
@@ -202,6 +220,20 @@ export function ExerciseDialog({
             <p className="error" role="alert">
               {error}
             </p>
+          )}
+          {draft.error ? (
+            <p className="error" role="status">
+              Draft could not be saved on this device.
+            </p>
+          ) : (
+            draft.hasDraft && (
+              <div className="draft-status">
+                <span>Draft saved on this device</span>
+                <button type="button" className="text-button" onClick={draft.discard}>
+                  Discard draft
+                </button>
+              </div>
+            )
           )}
           <button className="button primary full" type="submit">
             <Check size={18} />

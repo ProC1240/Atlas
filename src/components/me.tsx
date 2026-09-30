@@ -15,6 +15,8 @@ import {
 import { profileSchema, parseData, type TrainingData } from '@/domain/training';
 import { source } from '@/domain/catalog';
 import { useTraining } from './store';
+import { useDraft } from './use-draft';
+import { profileDraftSchema, type ProfileDraft } from '@/lib/drafts';
 import { Dialog, SectionHeading } from './ui';
 function download(name: string, text: string, type = 'application/json') {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -26,8 +28,9 @@ function download(name: string, text: string, type = 'application/json') {
 }
 export function Me() {
   const { data, mode, email, mutate, requireSave, toast, signOut, setAuthOpen } = useTraining();
-  const [profile, setProfile] = useState(data.profile),
-    [error, setError] = useState(''),
+  const draft = useDraft<ProfileDraft>('profile', data.profile, profileDraftSchema);
+  const { value: profile, setValue: setProfile } = draft;
+  const [error, setError] = useState(''),
     [imported, setImported] = useState<TrainingData | null>(null),
     [report, setReport] = useState(false),
     [reportText, setReportText] = useState('');
@@ -35,7 +38,14 @@ export function Me() {
   const update = (key: keyof typeof profile, value: string) =>
     setProfile((p) => ({
       ...p,
-      [key]: key === 'name' || key === 'sex' ? value || null : value === '' ? null : Number(value),
+      [key]:
+        key === 'name'
+          ? value
+          : key === 'sex'
+            ? value || null
+            : value === ''
+              ? null
+              : Number(value),
     }));
   async function importFile(file?: File) {
     if (!file) return;
@@ -58,7 +68,7 @@ export function Me() {
       return;
     }
     requireSave(() => {
-      mutate((d) => ({ ...d, profile: parsed.data }));
+      if (!mutate((d) => ({ ...d, profile: parsed.data }), draft.clear)) return;
       toast('Profile updated.');
     });
   }
@@ -148,7 +158,7 @@ export function Me() {
                   type="number"
                   min="1"
                   max="7"
-                  value={profile.weeklyGoal}
+                  value={profile.weeklyGoal ?? ''}
                   onChange={(e) => update('weeklyGoal', e.target.value)}
                 />
               </label>
@@ -159,7 +169,7 @@ export function Me() {
                   min=".5"
                   max="6"
                   step=".25"
-                  value={profile.waterGoal}
+                  value={profile.waterGoal ?? ''}
                   onChange={(e) => update('waterGoal', e.target.value)}
                 />
               </label>
@@ -177,6 +187,20 @@ export function Me() {
               <Save size={17} />
               Save profile
             </button>
+            {draft.error ? (
+              <p className="error" role="status">
+                Draft could not be saved on this device.
+              </p>
+            ) : (
+              draft.hasDraft && (
+                <div className="draft-status">
+                  <span>Draft saved on this device</span>
+                  <button type="button" className="text-button" onClick={draft.discard}>
+                    Discard draft
+                  </button>
+                </div>
+              )
+            )}
           </form>
         </section>
         <div className="settings-side">
@@ -293,8 +317,8 @@ export function Me() {
               className="button primary"
               onClick={() =>
                 requireSave(() => {
-                  mutate(() => imported);
-                  setProfile(imported.profile);
+                  if (!mutate(() => imported)) return;
+                  draft.reset(imported.profile);
                   setImported(null);
                   toast('Backup imported.');
                 })
