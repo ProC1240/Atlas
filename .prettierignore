@@ -1,0 +1,8 @@
+node_modules
+.next
+public
+package-lock.json
+AGENTS.md
+CLAUDE.md
+ATLAS-FIGMA-CONCEPTS.md
+test-results

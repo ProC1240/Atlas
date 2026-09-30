@@ -1,0 +1,38 @@
+{
+  "name": "atlas-training",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser": "node scripts/verify-browser.mjs",
+    "format": "prettier --write src tests scripts next.config.ts"
+  },
+  "dependencies": {
+    "@fontsource/cinzel": "^5.2.8",
+    "@fontsource/dm-sans": "^5.2.8",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@supabase/supabase-js": "^2.99.0",
+    "lucide-react": "^0.577.0",
+    "next": "^16.2.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.183.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.183.0",
+    "playwright": "^1.62.1",
+    "prettier": "^3.9.9",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
