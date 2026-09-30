@@ -26,6 +26,8 @@ interface Store {
   email: string | null;
   scope: string;
   authConfigured: boolean;
+  authProviders: AuthStatus['providers'];
+  beginGoogleSignIn: () => Promise<void>;
   saving: boolean;
   syncError: string | null;
   mutate: (change: Change, onSaved?: () => void) => TrainingData | null;
@@ -47,6 +49,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     [email, setEmail] = useState<string | null>(null),
     [userId, setUserId] = useState<string | null>(null),
     [configured, setConfigured] = useState(false),
+    [providers, setProviders] = useState<AuthStatus['providers']>({ google: false, email: false }),
     [authOpen, setAuthOpenState] = useState(false),
     [notice, setNotice] = useState(''),
     [saving, setSaving] = useState(false),
@@ -168,9 +171,30 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         const status = await apiRequest<AuthStatus>('/api/auth/session');
         if (disposed) return;
         setConfigured(status.configured);
-        if (status.user) await activate(cloudRepository(status.user.id), 'cloud', status.user);
-        else if (localStorage.getItem(MODE_KEY) === '1')
+        setProviders(status.providers);
+        if (status.user) {
+          localStorage.removeItem(MODE_KEY);
+          await activate(cloudRepository(status.user.id), 'cloud', status.user);
+        } else if (localStorage.getItem(MODE_KEY) === '1')
           await activate(deviceRepository(), 'device');
+        if (disposed) return;
+        const url = new URL(window.location.href);
+        const result = url.searchParams.get('auth');
+        if (result) {
+          url.searchParams.delete('auth');
+          window.history.replaceState(
+            window.history.state,
+            '',
+            url.pathname + url.search + url.hash,
+          );
+          if (result === 'success' && status.user) {
+            announceAuth();
+            toast('Signed in. Your cloud journal is ready.');
+          } else {
+            setAuthOpenState(true);
+            toast('Google sign-in was cancelled or expired. Please try again.');
+          }
+        }
       } catch {
         if (!disposed)
           setSyncError(
@@ -185,7 +209,18 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
       disposed = true;
       loading.current++;
     };
-  }, [activate]);
+  }, [activate, toast]);
+  const beginGoogleSignIn = useCallback(async () => {
+    if (dirty.current || writing.current)
+      throw new Error('Resolve pending saves or export a backup before continuing with Google.');
+    const { url } = await apiRequest<{ url: string }>('/api/auth/google', {
+      method: 'POST',
+      body: { next: window.location.pathname },
+    });
+    if (dirty.current || writing.current)
+      throw new Error('Your journal changed. Finish saving, then try Google sign-in again.');
+    window.location.assign(url);
+  }, []);
   const finishSignIn = useCallback(async () => {
     const status = await apiRequest<AuthStatus>('/api/auth/session');
     if (!status.user)
@@ -215,6 +250,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         const status = await apiRequest<AuthStatus>('/api/auth/session');
         if (disposed) return;
         setConfigured(status.configured);
+        setProviders(status.providers);
         if ((status.user?.id ?? null) === activeUser.current) return;
         if (dirty.current || writing.current) {
           expired.current = true;
@@ -327,6 +363,8 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         email,
         scope: userId ? 'cloud:' + userId : mode,
         authConfigured: configured,
+        authProviders: providers,
+        beginGoogleSignIn,
         saving,
         syncError,
         mutate,

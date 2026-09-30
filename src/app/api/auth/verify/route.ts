@@ -3,6 +3,7 @@ import { ApiError, readJson } from '@/lib/api-security';
 import {
   apiHandler,
   apiResponse,
+  authProviders,
   protectMutation,
   serverClient,
   throttleAuth,
@@ -14,6 +15,7 @@ const schema = z
 export async function POST(request: Request) {
   return apiHandler(async () => {
     protectMutation(request);
+    if (!authProviders().email) throw new ApiError(503, 'Email sign-in is unavailable.');
     const { email, token } = schema.parse(await readJson(request));
     throttleAuth('verify', email);
     const db = await serverClient();

@@ -38,5 +38,6 @@ export function apiRequest<T>(
 }
 export interface AuthStatus {
   configured: boolean;
+  providers: { google: boolean; email: boolean };
   user: { id: string; email: string | null } | null;
 }

@@ -14,6 +14,7 @@ import { TrainingProvider } from '@/components/store';
 export const metadata: Metadata = {
   title: 'ATLAS — Strength, with purpose',
   description: 'Understand your body. Build your rhythm. A thoughtful strength-training companion.',
+  icons: { icon: '/atlas-logo.png', apple: '/atlas-logo.png' },
   robots: { index: false, follow: false },
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {

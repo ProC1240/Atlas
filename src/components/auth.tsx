@@ -10,6 +10,8 @@ export function AuthDialog() {
     setAuthOpen,
     startDevice,
     authConfigured: available,
+    authProviders: providers,
+    beginGoogleSignIn,
     finishSignIn,
   } = useTraining();
   const [email, setEmail] = useState(''),
@@ -25,6 +27,16 @@ export function AuthDialog() {
     return () => clearTimeout(timer);
   }, [cooldown]);
   if (!authOpen) return null;
+  async function google() {
+    setBusy(true);
+    setError('');
+    try {
+      await beginGoogleSignIn();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Google sign-in failed. Please try again.');
+      setBusy(false);
+    }
+  }
   async function send() {
     setBusy(true);
     setError('');
@@ -57,7 +69,16 @@ export function AuthDialog() {
       </div>
       <h2>Make it your own.</h2>
       <p className="body-copy">Browse freely. Choose how to save your progress.</p>
-      {available ? (
+      {available && providers.google && (
+        <button
+          className="button primary full auth-submit"
+          disabled={busy}
+          onClick={() => void google()}
+        >
+          {busy ? 'Please wait…' : 'Continue with Google'}
+        </button>
+      )}
+      {available && providers.email && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -124,27 +145,28 @@ export function AuthDialog() {
               </button>
             </>
           )}
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
         </form>
-      ) : (
+      )}
+      {(!available || (!providers.google && !providers.email)) && (
         <div className="cloud-unavailable">
           <Mail size={19} />
           <div>
             <strong>Cloud sign-in isn’t connected yet.</strong>
-            <p>This local preview needs a Supabase project.</p>
+            <p>You can still save progress on this device.</p>
           </div>
         </div>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
       )}
       <div className="divider-label">
         <span />
         OR
         <span />
       </div>
-      <button className="button secondary full" onClick={() => void startDevice()}>
+      <button className="button secondary full" disabled={busy} onClick={() => void startDevice()}>
         <Monitor size={18} />
         Continue on this device
       </button>

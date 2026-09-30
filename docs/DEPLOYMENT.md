@@ -10,11 +10,22 @@ Build with `npm ci` and `npm run build`. A self-hosted deployment needs a revers
 
 1. Review and apply `supabase/migrations/001_training.sql` to your own project.
 2. Copy `.env.example` to `.env.local`. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (public publishable/anon key), and `APP_ORIGIN` (exact application origin). These are server-only settings; do not use a service-role key. Set an HTTPS origin in production.
-3. Configure email OTP, allowed URLs, delivery, and rate limits. The email template must include `{{ .Token }}` for code entry.
+3. Choose providers with `AUTH_GOOGLE_ENABLED` and `AUTH_EMAIL_ENABLED`. Keep both disabled until their provider setup and database migration are complete. For email OTP, configure delivery and rate limits; its email template must include `{{ .Token }}` for code entry.
 4. Test sign-in, expired codes, sign-out, recovery, and isolation between two real accounts.
 5. Verify concurrent writes and save-failure recovery before enabling cloud mode publicly.
 
 Cloud and device journals remain separate; moving data requires explicit export/import. The cloud adapter stores a versioned snapshot with optimistic concurrency and a 2 MB payload cap. Larger workloads will need normalized records and incremental queries.
+
+## Google sign-in
+
+1. Create a Web application OAuth client in a dedicated Google Cloud project. Request only the default identity scopes (openid, email, profile); no Gmail, Drive, or offline access is needed.
+2. Add the production origin as an authorized JavaScript origin, and `https://<supabase-project>.supabase.co/auth/v1/callback` as the Google authorized redirect URI.
+3. Enter the Google client ID and secret in Supabase's Google provider settings. Never put the client secret in Git or the browser bundle.
+4. Set Supabase Site URL to the production origin. Allow the app callback `https://atlas-five-snowy.vercel.app/auth/callback**` (the query contains a per-login state and may include an SDK flow ID). Do not allow arbitrary preview domains for production auth.
+5. Set `APP_ORIGIN=https://atlas-five-snowy.vercel.app` and `AUTH_GOOGLE_ENABLED=true` on Vercel production, then redeploy. Leave email disabled until SMTP is ready if Google is the only live provider.
+6. Add the requested testing account to Google Audience → Test users while testing. This list is not an ATLAS authorization policy; do not rely on it to enforce an application email allowlist. Publishing to a wider audience is a separate release decision.
+
+The server starts OAuth only through a same-origin POST. A ten-minute HttpOnly transaction cookie binds the callback to the browser; Supabase PKCE binds the authorization code to the verifier. Callback destinations are restricted to known app pages. Cancellation and failed callbacks return a generic error without leaking provider details or tokens.
 
 ## Security boundaries
 
@@ -42,7 +53,9 @@ Cloud and device journals remain separate; moving data requires explicit export/
 
 Workout and profile drafts are schema-validated localStorage entries, scoped by guest/device/account and form. They expire after seven days, can be discarded, and clear only after the journal save succeeds. They are not encrypted or cloud-synced; use a trusted browser. Signing out clears that cloud account's local drafts without deleting its saved journal.
 
-`npm run test:auth` runs the production API and UI against a mock Supabase service on a separate local port. It covers OTP rejection, cookie attributes, refresh, CSRF guards, identity checks, save/reload, conflicts, sign-out, and provider outages. The mock is test code only. Real email delivery, SQL/RLS enforcement, and two-account isolation in PostgreSQL must still be verified on your Supabase project.
+`npm run test:auth` runs the production API and UI against a mock Supabase service on a separate local port. It covers Google PKCE callbacks, cancellation, redirect guards, OTP rejection, cookie attributes, refresh, CSRF guards, identity checks, save/reload, conflicts, sign-out, and provider outages. The mock is test code only; live provider login must be verified separately.
+
+`supabase/tests/rls.sql` checks owner access, account isolation, revision conflicts, and client privilege restrictions inside a rolled-back transaction. It passed against the ATLAS hosted database on 2026-09-30 without retaining fixture accounts or journals. Run it after applying the migration to each new database.
 
 The cookie adapter follows the [Supabase server-side guide](https://supabase.com/docs/guides/auth/server-side/advanced-guide). ATLAS deliberately uses a server-only auth client so browser code does not need token access.
 

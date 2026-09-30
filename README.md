@@ -64,7 +64,7 @@ scripts/          Browser verification
 
 ## Status
 
-Working web MVP. Device storage and local drafts are available. Email OTP, HttpOnly sessions, refresh, sign-out, and protected journal APIs are implemented; live Supabase configuration and database verification are still required. Payments, community, and a mobile client are planned, not implemented.
+Working web MVP. Device storage and local drafts are available. Google OAuth (PKCE), optional email OTP, HttpOnly sessions, refresh, sign-out, and protected journal APIs are implemented; live provider configuration and database verification are still required. Payments, community, and a mobile client are planned, not implemented.
 
 The 3D models are stylized prototypes. Exercise notes are adapted from *Functional Anatomy for Strength Training*, with page references in the catalog; the source PDF is not distributed. Exercise animations and body estimates are educational, not medical guidance.
 

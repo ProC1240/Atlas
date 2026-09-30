@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { once } from 'node:events';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
@@ -23,6 +23,7 @@ const bob = {
 };
 const sessions = new Map(),
   refresh = new Map(),
+  authCodes = new Map(),
   journals = new Map();
 let refreshCount = 0,
   unavailable = false;
@@ -52,6 +53,16 @@ const upstream = createServer(async (req, res) => {
     res.end(JSON.stringify(data));
   };
   if (unavailable) return answer(503, { message: 'Provider temporarily unavailable' });
+  if (url.pathname === '/auth/v1/authorize') {
+    assert.equal(url.searchParams.get('provider'), 'google');
+    assert.equal(url.searchParams.get('code_challenge_method'), 's256');
+    const code = randomUUID();
+    authCodes.set(code, url.searchParams.get('code_challenge'));
+    const callback = new URL(url.searchParams.get('redirect_to'));
+    callback.searchParams.set('code', code);
+    res.writeHead(302, { Location: callback.href });
+    return res.end();
+  }
   if (url.pathname === '/auth/v1/otp') return answer(200, {});
   if (url.pathname === '/auth/v1/verify') {
     if (body.token !== '123456')
@@ -59,6 +70,18 @@ const upstream = createServer(async (req, res) => {
     return answer(200, issue(body.email === bob.email ? bob : alice));
   }
   if (url.pathname === '/auth/v1/token') {
+    if (url.searchParams.get('grant_type') === 'pkce') {
+      const challenge = authCodes.get(body.auth_code);
+      authCodes.delete(body.auth_code);
+      if (
+        !challenge ||
+        createHash('sha256')
+          .update(body.code_verifier ?? '')
+          .digest('base64url') !== challenge
+      )
+        return answer(400, { code: 'bad_code_verifier', message: 'Invalid PKCE exchange' });
+      return answer(200, issue(alice));
+    }
     const user = refresh.get(body.refresh_token);
     if (!user)
       return answer(400, { code: 'refresh_token_not_found', message: 'Invalid refresh token' });
@@ -109,6 +132,8 @@ const app = spawn(
       SUPABASE_URL: service,
       SUPABASE_PUBLISHABLE_KEY: 'test-public-key',
       APP_ORIGIN: base,
+      AUTH_GOOGLE_ENABLED: 'true',
+      AUTH_EMAIL_ENABLED: 'true',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   },
@@ -369,6 +394,70 @@ try {
   );
   assert.deepEqual(errors, []);
   pass('Repeated OTP attempts are throttled; no uncaught browser errors');
+  const oauth = await browser.newContext();
+  const oauthPage = await oauth.newPage();
+  await oauthPage.goto(base + '/me', { waitUntil: 'networkidle' });
+  await oauthPage.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await oauthPage.getByRole('button', { name: 'Continue with Google', exact: true }).click();
+  await oauthPage.getByText('Synced', { exact: true }).waitFor();
+  assert.equal(new URL(oauthPage.url()).pathname, '/me');
+  assert.equal(new URL(oauthPage.url()).search, '');
+  assert.equal((await (await api(oauth).get(base + '/api/auth/session')).json()).user.id, alice.id);
+  const oauthCookies = await oauth.cookies();
+  assert.ok(
+    oauthCookies.some(
+      (cookie) =>
+        cookie.name.startsWith('__Host-atlas-session') && cookie.httpOnly && cookie.secure,
+    ),
+  );
+  assert.ok(!oauthCookies.some((cookie) => cookie.name === '__Host-atlas-oauth'));
+  assert.equal(await oauthPage.evaluate(() => document.cookie.includes('atlas-session')), false);
+  pass(
+    'Google button → provider redirect → PKCE callback → cloud journal works without exposing tokens',
+  );
+
+  const denied = await browser.newContext();
+  const start = await api(denied).post(base + '/api/auth/google', {
+    headers,
+    data: { next: '//evil.example' },
+  });
+  assert.equal(start.status(), 200);
+  const authorize = new URL((await start.json()).url);
+  const callback = new URL(authorize.searchParams.get('redirect_to'));
+  const guardCookies = await denied.cookies();
+  assert.ok(
+    guardCookies.some(
+      (cookie) => cookie.name === '__Host-atlas-oauth' && cookie.httpOnly && cookie.secure,
+    ),
+  );
+  callback.searchParams.set('error', 'access_denied');
+  const cancelled = await api(denied).get(callback.href, { maxRedirects: 0 });
+  assert.equal(cancelled.status(), 303);
+  assert.equal(cancelled.headers().location, base + '/?auth=failed');
+  assert.match(cancelled.headers()['cache-control'], /no-store/);
+  assert.equal((await (await api(denied).get(base + '/api/auth/session')).json()).user, null);
+  const injected = await api(denied).get(
+    base + '/auth/callback?code=forged&state=forged&next=https://evil.example',
+    { maxRedirects: 0 },
+  );
+  assert.equal(injected.headers().location, base + '/?auth=failed');
+  assert.equal((await (await api(denied).get(base + '/api/auth/session')).json()).user, null);
+  assert.equal(
+    (
+      await api(denied).post(base + '/api/auth/google', {
+        headers: { ...headers, Origin: 'https://evil.example' },
+        data: {},
+      })
+    ).status(),
+    403,
+  );
+  assert.equal(
+    (await api(oauth).post(base + '/api/auth/google', { headers, data: {} })).status(),
+    409,
+  );
+  pass(
+    'OAuth cancellation, callback injection, external return URLs, CSRF, and signed-in account replacement are rejected',
+  );
   console.log(
     'Auth integration verified against a local mock provider. Real Supabase email delivery and PostgreSQL RLS still require live verification.',
   );

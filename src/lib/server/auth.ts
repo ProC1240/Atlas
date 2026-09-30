@@ -6,26 +6,45 @@ import { ZodError } from 'zod';
 import { ApiError, assertSameOrigin, createRateLimiter } from '../api-security';
 
 const rateLimit = createRateLimiter();
+export const cookiePrefix = process.env.NODE_ENV === 'production' ? '__Host-atlas' : 'atlas';
+export const privateCookie = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+};
 export function authConfigured() {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY);
+}
+export function authProviders() {
+  return {
+    google: authConfigured() && process.env.AUTH_GOOGLE_ENABLED === 'true',
+    email: authConfigured() && process.env.AUTH_EMAIL_ENABLED !== 'false',
+  };
+}
+export function applicationOrigin(request: Request) {
+  if (!process.env.APP_ORIGIN && process.env.NODE_ENV === 'production')
+    throw new ApiError(503, 'Application origin is not configured.');
+  return new URL(process.env.APP_ORIGIN ?? request.url).origin;
 }
 export async function serverClient() {
   if (!authConfigured()) throw new ApiError(503, 'Cloud sign-in is not configured.');
   const jar = await cookies();
-  const secure = process.env.NODE_ENV === 'production';
   return createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
     cookieOptions: {
-      name: secure ? '__Host-atlas-session' : 'atlas-session',
-      httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      path: '/',
+      name: `${cookiePrefix}-session`,
+      ...privateCookie,
       maxAge: 60 * 60 * 24 * 7,
     },
     cookies: {
       getAll: () => jar.getAll(),
       setAll: (values) => {
-        for (const { name, value, options } of values) jar.set(name, value, options);
+        for (const { name, value, options } of values)
+          jar.set(name, value, {
+            ...options,
+            ...privateCookie,
+            ...(name.includes('code-verifier') && options.maxAge !== 0 ? { maxAge: 600 } : {}),
+          });
       },
     },
     global: {
