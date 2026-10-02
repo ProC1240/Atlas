@@ -8,7 +8,9 @@ import { bondProgress, dailyAvailable } from '@/domain/bond';
 import { useTraining } from './store';
 import { SectionHeading, Ring } from './ui';
 import { OfferingDialog } from './offering-dialog';
-const AvatarScene = dynamic(() => import('./scene').then((m) => m.AvatarScene), { ssr: false });
+const AvatarScene = dynamic(() => import('./avatar-scene').then((m) => m.AvatarScene), {
+  ssr: false,
+});
 const symbols = { zeus: Crown, athena: Shield, hermes: Feather, poseidon: Waves, ares: Swords };
 export function Avatar() {
   const { data, mutate, requireSave, toast } = useTraining();

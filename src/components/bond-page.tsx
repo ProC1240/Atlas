@@ -9,7 +9,9 @@ import { useTraining } from './store';
 import { Ring } from './ui';
 import { ItemArt } from './item-art';
 import { OfferingDialog } from './offering-dialog';
-const AvatarScene = dynamic(() => import('./scene').then((m) => m.AvatarScene), { ssr: false });
+const AvatarScene = dynamic(() => import('./avatar-scene').then((m) => m.AvatarScene), {
+  ssr: false,
+});
 
 export function BondPage() {
   const { data, mutate, requireSave, toast } = useTraining();

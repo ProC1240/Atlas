@@ -68,4 +68,6 @@ Working web MVP. Device storage and local drafts are available. Google OAuth (PK
 
 The 3D models are stylized prototypes. Exercise notes are adapted from *Functional Anatomy for Strength Training*, with page references in the catalog; the source PDF is not distributed. Exercise animations and body estimates are educational, not medical guidance.
 
+The new full-body avatar sculptures are a visual preview pending approval. See [avatar assets](docs/AVATAR-ASSETS.md) for reproducible model generation and limitations.
+
 See [deployment notes](docs/DEPLOYMENT.md) for setup, security boundaries, and release checks.

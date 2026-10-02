@@ -9,7 +9,9 @@ import { useTraining } from './store';
 import { Ring } from './ui';
 import { bondProgress, dailyAvailable } from '@/domain/bond';
 import { OfferingDialog } from './offering-dialog';
-const AvatarScene = dynamic(() => import('./scene').then((m) => m.AvatarScene), { ssr: false });
+const AvatarScene = dynamic(() => import('./avatar-scene').then((m) => m.AvatarScene), {
+  ssr: false,
+});
 export function Overview() {
   const { data, mutate, requireSave, toast } = useTraining();
   const today = dateKey(),

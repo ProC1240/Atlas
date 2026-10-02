@@ -1835,6 +1835,25 @@ form label + label {
   gap: 26px;
   align-items: start;
 }
+.avatar-render {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.avatar-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+.avatar-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 18px;
+}
 .avatar-showcase {
   min-height: 755px;
   position: relative;
@@ -3526,8 +3545,8 @@ form label + label {
   .hero-sculpture {
     width: 65%;
     height: 80%;
-    right: -17%;
-    bottom: 8%;
+    right: -2%;
+    bottom: 2%;
   }
   .hero-copy > p {
     font-size: 10px;

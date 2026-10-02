@@ -10,6 +10,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "test:browser": "node scripts/verify-browser.mjs",
     "test:auth": "node --import tsx scripts/verify-auth.mjs",
+    "models:build": "node scripts/build-avatars.mjs",
+    "test:avatars": "node scripts/verify-avatars.mjs",
     "format": "prettier --write src tests scripts next.config.ts"
   },
   "dependencies": {

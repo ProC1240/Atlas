@@ -1,18 +1,11 @@
 'use client';
-import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import {
-  BufferGeometry,
-  Float32BufferAttribute,
-  DoubleSide,
-  Spherical,
-  Vector3,
-  type Group,
-} from 'three';
+import { BufferGeometry, Float32BufferAttribute, DoubleSide, Spherical, Vector3 } from 'three';
 import type { OrbitControls as Controls } from 'three-stdlib';
 import { muscleById, type MuscleId } from '@/domain/catalog';
-import { avatars, type GodId } from '@/domain/avatars';
+import { WebGL } from './webgl';
 
 type Vec = [number, number, number];
 function Pectoral({
@@ -271,136 +264,6 @@ function AnatomicalFigure({
     </group>
   );
 }
-export function GreekBust({
-  god = 'zeus',
-  faceForward = false,
-}: {
-  god?: GodId;
-  faceForward?: boolean;
-}) {
-  const sculpture = useRef<Group>(null);
-  const reduced = useRef(false);
-  useEffect(() => {
-    reduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
-  useFrame(({ invalidate }, delta) => {
-    if (!faceForward || !sculpture.current) return;
-    const rotation = sculpture.current.rotation;
-    if (Math.abs(rotation.y) < 0.001) return;
-    rotation.y = reduced.current ? 0 : rotation.y * Math.exp(-5 * Math.min(delta, 0.1));
-    invalidate();
-  });
-  const accent = avatars.find((a) => a.id === god)?.accent ?? '#bec9af';
-  const beard = god === 'zeus' || god === 'poseidon';
-  const helmet = god === 'athena' || god === 'ares';
-  return (
-    <group ref={sculpture} position={[0, -0.18, 0]} rotation={[0, faceForward ? -0.95 : -0.28, 0]}>
-      <mesh position={[0, -0.92, 0]}>
-        <cylinderGeometry args={[0.43, 0.55, 0.22, 48]} />
-        <meshStandardMaterial color="#345343" roughness={0.75} />
-      </mesh>
-      <Stone position={[0, -0.61, 0]} scale={[0.63, 0.32, 0.29]} color={accent} />
-      <Stone position={[0, -0.2, 0]} scale={[0.2, 0.36, 0.2]} color={accent} />
-      <Stone position={[0, 0.38, 0]} scale={[0.365, 0.51, 0.33]} color={accent} />
-      <Stone position={[0, 0.1, 0.113]} scale={[0.29, 0.275, 0.25]} color={accent} />
-      <Stone position={[0, 0.32, 0.31]} scale={[0.054, 0.13, 0.087]} color={accent} />
-      <Stone position={[0, 0.145, 0.335]} scale={[0.102, 0.014, 0.014]} color="#8f9e85" />
-      {beard && <Stone position={[0, -0.015, 0.17]} scale={[0.27, 0.25, 0.22]} color="#8fa286" />}
-      {[-1, 1].map((s) => (
-        <group key={s}>
-          <Stone position={[s * 0.374, 0.31, 0]} scale={[0.055, 0.112, 0.075]} color={accent} />
-          <Stone
-            position={[s * 0.146, 0.433, 0.292]}
-            scale={[0.092, 0.031, 0.024]}
-            color="#7c8e75"
-          />
-          <Stone
-            position={[s * 0.146, 0.49, 0.288]}
-            scale={[0.129, 0.035, 0.055]}
-            rotation={[0, 0, -s * 0.14]}
-            color={accent}
-          />
-          <Stone position={[s * 0.157, 0.42, 0.318]} scale={[0.046, 0.018, 0.012]} color={accent} />
-          <Stone
-            position={[s * 0.196, 0.279, 0.225]}
-            scale={[0.127, 0.091, 0.052]}
-            color={accent}
-          />
-          <Stone
-            position={[s * 0.245, -0.441, 0.206]}
-            scale={[0.225, 0.025, 0.024]}
-            rotation={[0, 0, s * 0.1]}
-            color="#94ab91"
-          />
-          {Array.from({ length: 7 }, (_, i) => (
-            <Stone
-              key={i}
-              position={[
-                s * (0.31 * Math.sin(i * 0.28)),
-                0.76 - 0.16 * (i / 6),
-                -0.025 + 0.22 * Math.cos(i * 0.3),
-              ]}
-              scale={[0.12, 0.105, 0.103]}
-              color={helmet ? '#78927d' : '#7f9279'}
-            />
-          ))}
-          {beard &&
-            Array.from({ length: 7 }, (_, i) => (
-              <Stone
-                key={'beard' + i}
-                position={[s * (0.245 - i * 0.035), 0.075 - i * 0.036, 0.28 + Math.sin(i) * 0.035]}
-                scale={[0.066, 0.115, 0.058]}
-                rotation={[0, 0, -s * 0.2]}
-                color="#8ca285"
-              />
-            ))}
-          {god === 'hermes' &&
-            [0, 1, 2].map((i) => (
-              <Stone
-                key={'wing' + i}
-                position={[s * (0.44 + i * 0.073), 0.64 + i * 0.09, -0.045]}
-                scale={[0.045, 0.18, 0.055]}
-                rotation={[0, 0, -s * (0.45 + i * 0.1)]}
-                color="#d5e8cd"
-              />
-            ))}
-          {helmet && (
-            <Stone
-              position={[s * 0.32, 0.32, 0.06]}
-              scale={[0.072, 0.24, 0.13]}
-              rotation={[0, 0, -s * 0.15]}
-              color="#81977a"
-            />
-          )}
-        </group>
-      ))}
-      {helmet && (
-        <>
-          <Stone position={[0, 0.716, -0.02]} scale={[0.39, 0.31, 0.35]} color="#839c81" />
-          <Stone
-            position={[0, 0.94, -0.11]}
-            scale={[0.077, 0.26, 0.35]}
-            color={god === 'ares' ? '#ab705f' : '#bcb27b'}
-          />
-          <Stone position={[0, 0.432, 0.334]} scale={[0.037, 0.18, 0.035]} color="#99ad8f" />
-        </>
-      )}
-      {god === 'poseidon' && (
-        <group position={[0, 0.86, 0]}>
-          {[-1, 0, 1].map((i) => (
-            <mesh key={i} position={[i * 0.18, i === 0 ? 0.065 : 0, 0.15]}>
-              <coneGeometry args={[0.058, 0.27, 4]} />
-              <meshStandardMaterial color="#7da7a0" metalness={0.3} roughness={0.55} />
-            </mesh>
-          ))}
-        </group>
-      )}
-      {god === 'zeus' && (
-        <Stone position={[0, 0.78, 0.194]} scale={[0.27, 0.044, 0.088]} color="#a9bc82" />
-      )}
-    </group>
-  );
-}
 function Lighting() {
   return (
     <>
@@ -410,39 +273,6 @@ function Lighting() {
       <directionalLight position={[0, 0, 4]} intensity={0.45} />
     </>
   );
-}
-function WebGL({
-  children,
-  fallback,
-  className = '',
-  onUnavailable,
-}: {
-  children: ReactNode;
-  fallback: ReactNode;
-  className?: string;
-  onUnavailable?: () => void;
-}) {
-  const [supported, setSupported] = useState<boolean | null>(null);
-  useEffect(() => {
-    try {
-      const c = document.createElement('canvas');
-      const gl = c.getContext('webgl2');
-      setSupported(Boolean(gl));
-      gl?.getExtension('WEBGL_lose_context')?.loseContext();
-    } catch {
-      setSupported(false);
-    }
-  }, []);
-  useEffect(() => {
-    if (supported === false) onUnavailable?.();
-  }, [supported, onUnavailable]);
-  if (supported !== true)
-    return (
-      <div className={`scene-fallback ${className}`}>
-        {supported === null ? <span className="loading-orbit" /> : fallback}
-      </div>
-    );
-  return <div className={`three-scene ${className}`}>{children}</div>;
 }
 export function AnatomyScene({
   selected,
@@ -479,56 +309,6 @@ export function AnatomyScene({
           <Lighting />
           <AnatomicalFigure selected={selected} onSelect={onSelect} />
           <CameraRig selected={selected} back={back} reset={reset} />
-        </Suspense>
-      </Canvas>
-    </WebGL>
-  );
-}
-function SceneReady({ onReady }: { onReady?: () => void }) {
-  const notified = useRef(false);
-  useFrame(() => {
-    if (notified.current) return;
-    notified.current = true;
-    onReady?.();
-  });
-  return null;
-}
-export function AvatarScene({
-  god = 'zeus',
-  interactive = false,
-  ceremony = false,
-  onReady,
-}: {
-  god?: GodId;
-  interactive?: boolean;
-  ceremony?: boolean;
-  onReady?: () => void;
-}) {
-  return (
-    <WebGL
-      onUnavailable={onReady}
-      fallback={<div className="bust-fallback">{god.substring(0, 1).toUpperCase()}</div>}
-    >
-      <Canvas
-        frameloop="demand"
-        dpr={[1, 1.5]}
-        camera={{ position: [0, 0.15, 3.7], fov: 40 }}
-        gl={{ antialias: true, alpha: true }}
-        aria-label={`${god} stylized Greek bust`}
-      >
-        <Suspense fallback={null}>
-          <Lighting />
-          <GreekBust god={god} faceForward={ceremony} />
-          <SceneReady onReady={onReady} />
-          {ceremony && <pointLight position={[0, 0.3, 2]} color="#d0f5b6" intensity={2} />}
-          {interactive && !ceremony && (
-            <OrbitControls
-              enablePan={false}
-              enableZoom={false}
-              minPolarAngle={0.8}
-              maxPolarAngle={1.9}
-            />
-          )}
         </Suspense>
       </Canvas>
     </WebGL>

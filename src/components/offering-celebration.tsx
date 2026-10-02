@@ -7,7 +7,7 @@ import { ItemArt } from './item-art';
 import { Ring } from './ui';
 
 const AvatarScene = memo(
-  dynamic(() => import('./scene').then((m) => m.AvatarScene), { ssr: false }),
+  dynamic(() => import('./avatar-scene').then((m) => m.AvatarScene), { ssr: false }),
 );
 export interface OfferingReceipt {
   from: number;

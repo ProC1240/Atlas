@@ -1,0 +1,32 @@
+{
+  "zeus": {
+    "model": "/models/avatars/zeus-97f0865cfc5d.glb",
+    "bytes": 2394176,
+    "triangles": 122924,
+    "draws": 16
+  },
+  "athena": {
+    "model": "/models/avatars/athena-f216296285a4.glb",
+    "bytes": 2354636,
+    "triangles": 118444,
+    "draws": 19
+  },
+  "hermes": {
+    "model": "/models/avatars/hermes-7587579c2fa5.glb",
+    "bytes": 2028968,
+    "triangles": 102768,
+    "draws": 16
+  },
+  "poseidon": {
+    "model": "/models/avatars/poseidon-47ce22aa00b7.glb",
+    "bytes": 2285592,
+    "triangles": 116832,
+    "draws": 15
+  },
+  "ares": {
+    "model": "/models/avatars/ares-f4450475cdf3.glb",
+    "bytes": 2459032,
+    "triangles": 122708,
+    "draws": 16
+  }
+}
